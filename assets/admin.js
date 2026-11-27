@@ -11,7 +11,8 @@
     !cfg.supabaseAnonKey.startsWith("YOUR_");
 
   const status = $("#connectionStatus");
-  let db = null, user = null;
+  let db = null;
+  let user = null;
 
   const PROJECT_BUCKET = "site-media";
 
@@ -36,7 +37,8 @@
       document.querySelectorAll(".dash-tab")
         .forEach(x => x.classList.remove("active"));
 
-      $("#tab-" + b.dataset.tab).classList.add("active");
+      const tab = $("#tab-" + b.dataset.tab);
+      if (tab) tab.classList.add("active");
     });
   });
 
@@ -79,7 +81,8 @@
     await Promise.all([
       loadProjects(),
       loadMedia(),
-      loadSettings()
+      loadSettings(),
+      loadLogo()
     ]);
   }
 
@@ -103,7 +106,9 @@
         <div>
           <b>${esc(p.title)}</b>
           <small>${esc(p.category || "Project")} · ${esc(p.status || "")}</small>
-          ${p.image_url ? `<small><a href="${esc(p.image_url)}" target="_blank" rel="noopener">View project photo</a></small>` : ""}
+          ${p.image_url
+            ? `<small><a href="${esc(p.image_url)}" target="_blank" rel="noopener">View project photo</a></small>`
+            : ""}
         </div>
         <div>
           <button data-edit="${p.id}" class="mini-btn">EDIT</button>
@@ -124,6 +129,8 @@
   }
 
   function editProject(p) {
+    if (!p) return;
+
     $("#projectId").value = p.id;
     $("#projectTitle").value = p.title || "";
     $("#projectCategory").value = p.category || "";
@@ -184,7 +191,6 @@
       e.submitter || $("#projectForm button[type='submit']");
 
     const oldText = submitButton.textContent;
-
     submitButton.disabled = true;
     submitButton.textContent = "SAVING…";
 
@@ -217,8 +223,8 @@
         "Choose a photo from your computer. The image will upload when you save the project.";
 
       await loadProjects();
-
       alert("Project saved successfully.");
+
     } catch (error) {
       alert("Project was not saved: " + (error.message || String(error)));
     } finally {
@@ -356,8 +362,8 @@
 
       e.target.reset();
       await loadMedia();
-
       alert("Media uploaded successfully!");
+
     } catch (error) {
       alert("Media upload failed: " + (error.message || String(error)));
     } finally {
@@ -400,17 +406,11 @@
       .eq("id", 1)
       .maybeSingle();
 
-    if (error) return;
+    if (error || !data) return;
 
-    if (data) {
-      $("#settingPhone").value = data.phone || "";
-      $("#settingEmail").value = data.email || "";
-      $("#settingLocation").value = data.location || "";
-
-      if (data.logo_url) {
-        showLogoPreview(data.logo_url);
-      }
-    }
+    $("#settingPhone").value = data.phone || "";
+    $("#settingEmail").value = data.email || "";
+    $("#settingLocation").value = data.location || "";
   }
 
   $("#settingsForm").addEventListener("submit", async e => {
@@ -433,37 +433,39 @@
   });
 
   // LOGO MANAGER
+  async function loadLogo() {
+    const { data, error } = await db
+      .from("site_settings")
+      .select("logo_url")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (error) {
+      $("#logoStatus").textContent = error.message;
+      return;
+    }
+
+    if (data && data.logo_url) {
+      showLogoPreview(data.logo_url);
+      $("#logoStatus").textContent = "Your saved company logo.";
+    } else {
+      $("#logoStatus").textContent = "No custom logo loaded yet.";
+    }
+  }
+
   function showLogoPreview(url) {
     $("#logoPreview").src = url;
     $("#logoPreview").style.display = "block";
     $("#logoPlaceholder").style.display = "none";
-    $("#logoStatus").textContent = "Current company logo";
   }
 
   $("#logoFile").addEventListener("change", () => {
     const file = $("#logoFile").files[0];
-
     if (!file) return;
 
-    const validExtensions = /\.(png|jpe?g|svg)$/i;
-
-    if (!validExtensions.test(file.name)) {
-      alert("Please choose a PNG, JPG, JPEG or SVG logo.");
-      $("#logoFile").value = "";
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Logo must be smaller than 10 MB.");
-      $("#logoFile").value = "";
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-    $("#logoPreview").src = previewUrl;
-    $("#logoPreview").style.display = "block";
-    $("#logoPlaceholder").style.display = "none";
-    $("#logoStatus").textContent = "New logo selected. Press Upload & Save Logo.";
+    const localUrl = URL.createObjectURL(file);
+    showLogoPreview(localUrl);
+    $("#logoStatus").textContent = "Preview of the selected logo. Save to publish it.";
   });
 
   $("#logoForm").addEventListener("submit", async e => {
@@ -477,47 +479,45 @@
     const file = $("#logoFile").files[0];
 
     if (!file) {
-      alert("Please choose a logo file first.");
+      $("#logoMessage").textContent = "Please choose a logo file.";
       return;
     }
 
-    const validExtensions = /\.(png|jpe?g|svg)$/i;
+    const extension = file.name.split(".").pop().toLowerCase();
+    const allowed = ["png", "jpg", "jpeg", "svg"];
 
-    if (!validExtensions.test(file.name)) {
-      alert("Please choose a PNG, JPG, JPEG or SVG logo.");
+    if (!allowed.includes(extension)) {
+      $("#logoMessage").textContent =
+        "Please choose a PNG, JPG, JPEG or SVG file.";
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("Logo must be smaller than 10 MB.");
+      $("#logoMessage").textContent =
+        "Please choose a logo smaller than 10 MB.";
       return;
     }
 
-    const button = $("#saveLogoBtn");
-    const oldText = button.textContent;
+    const submitButton = $("#saveLogoBtn");
+    const oldText = submitButton.textContent;
 
-    button.disabled = true;
-    button.textContent = "UPLOADING…";
-    $("#logoMessage").textContent = "Uploading your company logo…";
+    submitButton.disabled = true;
+    submitButton.textContent = "UPLOADING…";
+    $("#logoMessage").textContent = "Uploading your logo. Please wait…";
+
+    let uploadedPath = "";
 
     try {
-      const extension = file.name.split(".").pop().toLowerCase();
-
-      const mimeTypes = {
-        png: "image/png",
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        svg: "image/svg+xml"
-      };
-
-      const contentType = mimeTypes[extension];
-
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const path = `branding/logo-${Date.now()}-${safeName}`;
+      uploadedPath = `branding/logo-${Date.now()}-${safeName}`;
+
+      const contentType = extension === "svg"
+        ? "image/svg+xml"
+        : file.type || (extension === "png" ? "image/png" : "image/jpeg");
 
       const { error: uploadError } = await db.storage
         .from(PROJECT_BUCKET)
-        .upload(path, file, {
+        .upload(uploadedPath, file, {
           cacheControl: "3600",
           upsert: false,
           contentType
@@ -527,34 +527,54 @@
 
       const { data: urlData } = db.storage
         .from(PROJECT_BUCKET)
-        .getPublicUrl(path);
+        .getPublicUrl(uploadedPath);
 
-      const { error: saveError } = await db
+      const logoUrl = urlData.publicUrl;
+
+      // Update only logo_url, preserving phone, email and location.
+      const { data: existing, error: readError } = await db
         .from("site_settings")
-        .upsert({
-          id: 1,
-          logo_url: urlData.publicUrl
-        });
+        .select("id")
+        .eq("id", 1)
+        .maybeSingle();
 
-      if (saveError) {
-        await db.storage.from(PROJECT_BUCKET).remove([path]);
-        throw saveError;
+      if (readError) throw readError;
+
+      let saveResult;
+
+      if (existing) {
+        saveResult = await db
+          .from("site_settings")
+          .update({ logo_url: logoUrl })
+          .eq("id", 1);
+      } else {
+        saveResult = await db
+          .from("site_settings")
+          .insert({ id: 1, logo_url: logoUrl });
       }
 
-      showLogoPreview(urlData.publicUrl);
+      if (saveResult.error) throw saveResult.error;
+
+      showLogoPreview(logoUrl);
+      $("#logoStatus").textContent = "Your company logo is saved.";
+      $("#logoMessage").textContent =
+        "Logo uploaded and saved successfully!";
 
       $("#logoFile").value = "";
-      $("#logoMessage").textContent =
-        "Logo saved successfully! Your website can now display the new logo.";
-
-      alert("Company logo uploaded and saved successfully!");
 
     } catch (error) {
+      if (uploadedPath) {
+        await db.storage
+          .from(PROJECT_BUCKET)
+          .remove([uploadedPath]);
+      }
+
       $("#logoMessage").textContent =
         "Logo upload failed: " + (error.message || String(error));
+
     } finally {
-      button.disabled = false;
-      button.textContent = oldText;
+      submitButton.disabled = false;
+      submitButton.textContent = oldText;
     }
   });
 
@@ -568,7 +588,7 @@
     });
   }
 
-  // HTML SAFETY
+  // HTML ESCAPING
   function esc(v) {
     return String(v ?? "").replace(/[&<>"']/g, c => ({
       "&": "&amp;",
