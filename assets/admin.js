@@ -2,35 +2,63 @@
 (() => {
   const $ = s => document.querySelector(s);
   const cfg = window.KAVITH_CONFIG || {};
-  const configured = window.supabase && cfg.supabaseUrl && !cfg.supabaseUrl.startsWith("YOUR_") && cfg.supabaseAnonKey && !cfg.supabaseAnonKey.startsWith("YOUR_");
+
+  const configured =
+    window.supabase &&
+    cfg.supabaseUrl &&
+    !cfg.supabaseUrl.startsWith("YOUR_") &&
+    cfg.supabaseAnonKey &&
+    !cfg.supabaseAnonKey.startsWith("YOUR_");
+
   const status = $("#connectionStatus");
   let db = null, user = null;
 
-  // Use the existing Supabase Storage bucket.
   const PROJECT_BUCKET = "site-media";
 
   if (configured) {
-    db = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    db = window.supabase.createClient(
+      cfg.supabaseUrl,
+      cfg.supabaseAnonKey
+    );
     status.textContent = "SUPABASE CONNECTED";
   } else {
     status.textContent = "SETUP REQUIRED — CHECK CONFIG";
   }
 
-  document.querySelectorAll(".admin-nav button").forEach(b => b.addEventListener("click", () => {
-    document.querySelectorAll(".admin-nav button").forEach(x => x.classList.remove("active"));
-    b.classList.add("active");
-    document.querySelectorAll(".dash-tab").forEach(x => x.classList.remove("active"));
-    $("#tab-" + b.dataset.tab).classList.add("active");
-  }));
+  // NAVIGATION
+  document.querySelectorAll(".admin-nav button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".admin-nav button")
+        .forEach(x => x.classList.remove("active"));
 
+      b.classList.add("active");
+
+      document.querySelectorAll(".dash-tab")
+        .forEach(x => x.classList.remove("active"));
+
+      $("#tab-" + b.dataset.tab).classList.add("active");
+    });
+  });
+
+  // LOGIN
   $("#loginForm").addEventListener("submit", async e => {
     e.preventDefault();
-    if (!db) { $("#loginMessage").textContent = "Connect Supabase first."; return; }
+
+    if (!db) {
+      $("#loginMessage").textContent = "Connect Supabase first.";
+      return;
+    }
+
     const { data, error } = await db.auth.signInWithPassword({
       email: $("#loginEmail").value,
       password: $("#loginPassword").value
     });
-    if (error) { $("#loginMessage").textContent = error.message; return; }
+
+    if (error) {
+      $("#loginMessage").textContent = error.message;
+      return;
+    }
+
     user = data.user;
     showDashboard();
   });
@@ -48,16 +76,28 @@
   }
 
   async function loadAll() {
-    await Promise.all([loadProjects(), loadMedia(), loadSettings()]);
+    await Promise.all([
+      loadProjects(),
+      loadMedia(),
+      loadSettings()
+    ]);
   }
 
+  // PROJECTS
   async function loadProjects() {
-    const { data, error } = await db.from("projects").select("*").order("created_at", { ascending: false });
+    const { data, error } = await db
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+
     if (error) {
-      $("#projectsList").innerHTML = `<p class="muted">Could not load projects: ${esc(error.message)}</p>`;
+      $("#projectsList").innerHTML =
+        `<p class="muted">Could not load projects: ${esc(error.message)}</p>`;
       return;
     }
+
     $("#projectCount").textContent = data.length;
+
     $("#projectsList").innerHTML = data.map(p => `
       <div class="manage-row">
         <div>
@@ -65,11 +105,22 @@
           <small>${esc(p.category || "Project")} · ${esc(p.status || "")}</small>
           ${p.image_url ? `<small><a href="${esc(p.image_url)}" target="_blank" rel="noopener">View project photo</a></small>` : ""}
         </div>
-        <div><button data-edit="${p.id}" class="mini-btn">EDIT</button><button data-delete="${p.id}" class="mini-btn danger">DELETE</button></div>
-      </div>`).join("") || "<p class='muted'>No projects yet.</p>";
+        <div>
+          <button data-edit="${p.id}" class="mini-btn">EDIT</button>
+          <button data-delete="${p.id}" class="mini-btn danger">DELETE</button>
+        </div>
+      </div>
+    `).join("") || "<p class='muted'>No projects yet.</p>";
 
-    $("#projectsList").querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editProject(data.find(p => p.id === b.dataset.edit)));
-    $("#projectsList").querySelectorAll("[data-delete]").forEach(b => b.onclick = () => deleteProject(b.dataset.delete));
+    $("#projectsList").querySelectorAll("[data-edit]").forEach(b => {
+      b.onclick = () => editProject(
+        data.find(p => String(p.id) === b.dataset.edit)
+      );
+    });
+
+    $("#projectsList").querySelectorAll("[data-delete]").forEach(b => {
+      b.onclick = () => deleteProject(b.dataset.delete);
+    });
   }
 
   function editProject(p) {
@@ -79,42 +130,71 @@
     $("#projectStatus").value = p.status || "Completed";
     $("#projectImage").value = p.image_url || "";
     $("#projectFile").value = "";
-    $("#projectImageNote").textContent = p.image_url ? "A photo is already saved. Choose another photo only if you want to replace it." : "Choose a photo from your computer. The image will upload when you save the project.";
+
+    $("#projectImageNote").textContent = p.image_url
+      ? "A photo is already saved. Choose another photo only if you want to replace it."
+      : "Choose a photo from your computer. The image will upload when you save the project.";
+
     $("#projectDescription").value = p.description || "";
+
     document.querySelector('[data-tab="projects"]').click();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function uploadProjectPhoto(file) {
     if (!file) return $("#projectImage").value || "";
-    if (!file.type.startsWith("image/")) throw new Error("Please choose an image file.");
-    if (file.size > 20 * 1024 * 1024) throw new Error("Please choose an image smaller than 20 MB.");
+
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Please choose an image file.");
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      throw new Error("Please choose an image smaller than 20 MB.");
+    }
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
     const path = `projects/${Date.now()}-${safeName}`;
-    const { error: uploadError } = await db.storage.from(PROJECT_BUCKET).upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type
-    });
+
+    const { error: uploadError } = await db.storage
+      .from(PROJECT_BUCKET)
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type
+      });
+
     if (uploadError) throw uploadError;
 
-    const { data } = db.storage.from(PROJECT_BUCKET).getPublicUrl(path);
+    const { data } = db.storage
+      .from(PROJECT_BUCKET)
+      .getPublicUrl(path);
+
     return data.publicUrl;
   }
 
   $("#projectForm").addEventListener("submit", async e => {
     e.preventDefault();
-    if (!db) { alert("Supabase is not connected."); return; }
 
-    const submitButton = e.submitter || $("#projectForm button[type='submit']");
+    if (!db) {
+      alert("Supabase is not connected.");
+      return;
+    }
+
+    const submitButton =
+      e.submitter || $("#projectForm button[type='submit']");
+
     const oldText = submitButton.textContent;
+
     submitButton.disabled = true;
     submitButton.textContent = "SAVING…";
 
     try {
-      const imageUrl = await uploadProjectPhoto($("#projectFile").files[0]);
+      const imageUrl = await uploadProjectPhoto(
+        $("#projectFile").files[0]
+      );
+
       const id = $("#projectId").value;
+
       const row = {
         title: $("#projectTitle").value.trim(),
         category: $("#projectCategory").value.trim(),
@@ -132,8 +212,12 @@
       e.target.reset();
       $("#projectId").value = "";
       $("#projectImage").value = "";
-      $("#projectImageNote").textContent = "Choose a photo from your computer. The image will upload when you save the project.";
+
+      $("#projectImageNote").textContent =
+        "Choose a photo from your computer. The image will upload when you save the project.";
+
       await loadProjects();
+
       alert("Project saved successfully.");
     } catch (error) {
       alert("Project was not saved: " + (error.message || String(error)));
@@ -147,27 +231,38 @@
     $("#projectForm").reset();
     $("#projectId").value = "";
     $("#projectImage").value = "";
-    $("#projectImageNote").textContent = "Choose a photo from your computer. The image will upload when you save the project.";
+
+    $("#projectImageNote").textContent =
+      "Choose a photo from your computer. The image will upload when you save the project.";
   };
 
   async function deleteProject(id) {
     if (!confirm("Delete this project?")) return;
-    const { error } = await db.from("projects").delete().eq("id", id);
+
+    const { error } = await db
+      .from("projects")
+      .delete()
+      .eq("id", id);
+
     if (error) alert(error.message);
     else loadProjects();
   }
 
   // MEDIA GALLERY
-  // Uses the same existing site-media bucket as Project Photos.
-
   async function loadMedia() {
-    const { data, error } = await db.from("media").select("*").order("created_at", { ascending: false });
+    const { data, error } = await db
+      .from("media")
+      .select("*")
+      .order("created_at", { ascending: false });
+
     if (error) {
-      $("#mediaList").innerHTML = `<p class="muted">${esc(error.message)}</p>`;
+      $("#mediaList").innerHTML =
+        `<p class="muted">${esc(error.message)}</p>`;
       return;
     }
 
     $("#mediaCount").textContent = data.length;
+
     $("#mediaList").innerHTML = data.map(m => `
       <div class="manage-row">
         <div>
@@ -176,12 +271,18 @@
         </div>
         <div>
           <a class="mini-btn" href="${esc(m.public_url)}" target="_blank" rel="noopener">VIEW</a>
-          <button class="mini-btn danger" data-media-delete="${m.id}" data-path="${esc(m.storage_path)}">DELETE</button>
+          <button class="mini-btn danger"
+            data-media-delete="${m.id}"
+            data-path="${esc(m.storage_path)}">DELETE</button>
         </div>
-      </div>`).join("") || "<p class='muted'>No media uploaded yet.</p>";
+      </div>
+    `).join("") || "<p class='muted'>No media uploaded yet.</p>";
 
     $("#mediaList").querySelectorAll("[data-media-delete]").forEach(b => {
-      b.onclick = () => deleteMedia(b.dataset.mediaDelete, b.dataset.path);
+      b.onclick = () => deleteMedia(
+        b.dataset.mediaDelete,
+        b.dataset.path
+      );
     });
   }
 
@@ -194,6 +295,7 @@
     }
 
     const f = $("#mediaFile").files[0];
+
     if (!f) {
       alert("Please choose a photo or video.");
       return;
@@ -209,7 +311,9 @@
       return;
     }
 
-    const submitButton = e.submitter || $("#mediaForm button[type='submit']");
+    const submitButton =
+      e.submitter || $("#mediaForm button[type='submit']");
+
     const oldText = submitButton ? submitButton.textContent : "";
 
     if (submitButton) {
@@ -221,7 +325,6 @@
     const path = `gallery/${Date.now()}-${safeName}`;
 
     try {
-      // Upload to the existing site-media bucket.
       const { error: upErr } = await db.storage
         .from(PROJECT_BUCKET)
         .upload(path, f, {
@@ -253,6 +356,7 @@
 
       e.target.reset();
       await loadMedia();
+
       alert("Media uploaded successfully!");
     } catch (error) {
       alert("Media upload failed: " + (error.message || String(error)));
@@ -276,7 +380,10 @@
       return;
     }
 
-    const { error } = await db.from("media").delete().eq("id", id);
+    const { error } = await db
+      .from("media")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       alert(error.message);
@@ -286,15 +393,23 @@
   }
 
   // WEBSITE SETTINGS
-
   async function loadSettings() {
-    const { data, error } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
+    const { data, error } = await db
+      .from("site_settings")
+      .select("*")
+      .eq("id", 1)
+      .maybeSingle();
+
     if (error) return;
 
     if (data) {
       $("#settingPhone").value = data.phone || "";
       $("#settingEmail").value = data.email || "";
       $("#settingLocation").value = data.location || "";
+
+      if (data.logo_url) {
+        showLogoPreview(data.logo_url);
+      }
     }
   }
 
@@ -308,17 +423,152 @@
       location: $("#settingLocation").value
     };
 
-    const { error } = await db.from("site_settings").upsert(row);
-    $("#settingsMessage").textContent = error ? error.message : "Settings saved successfully.";
+    const { error } = await db
+      .from("site_settings")
+      .upsert(row);
+
+    $("#settingsMessage").textContent = error
+      ? error.message
+      : "Settings saved successfully.";
   });
 
-  if (configured) db.auth.getSession().then(({ data }) => {
-    if (data.session) {
-      user = data.session.user;
-      showDashboard();
+  // LOGO MANAGER
+  function showLogoPreview(url) {
+    $("#logoPreview").src = url;
+    $("#logoPreview").style.display = "block";
+    $("#logoPlaceholder").style.display = "none";
+    $("#logoStatus").textContent = "Current company logo";
+  }
+
+  $("#logoFile").addEventListener("change", () => {
+    const file = $("#logoFile").files[0];
+
+    if (!file) return;
+
+    const validExtensions = /\.(png|jpe?g|svg)$/i;
+
+    if (!validExtensions.test(file.name)) {
+      alert("Please choose a PNG, JPG, JPEG or SVG logo.");
+      $("#logoFile").value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Logo must be smaller than 10 MB.");
+      $("#logoFile").value = "";
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    $("#logoPreview").src = previewUrl;
+    $("#logoPreview").style.display = "block";
+    $("#logoPlaceholder").style.display = "none";
+    $("#logoStatus").textContent = "New logo selected. Press Upload & Save Logo.";
+  });
+
+  $("#logoForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    if (!db) {
+      alert("Supabase is not connected.");
+      return;
+    }
+
+    const file = $("#logoFile").files[0];
+
+    if (!file) {
+      alert("Please choose a logo file first.");
+      return;
+    }
+
+    const validExtensions = /\.(png|jpe?g|svg)$/i;
+
+    if (!validExtensions.test(file.name)) {
+      alert("Please choose a PNG, JPG, JPEG or SVG logo.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Logo must be smaller than 10 MB.");
+      return;
+    }
+
+    const button = $("#saveLogoBtn");
+    const oldText = button.textContent;
+
+    button.disabled = true;
+    button.textContent = "UPLOADING…";
+    $("#logoMessage").textContent = "Uploading your company logo…";
+
+    try {
+      const extension = file.name.split(".").pop().toLowerCase();
+
+      const mimeTypes = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        svg: "image/svg+xml"
+      };
+
+      const contentType = mimeTypes[extension];
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const path = `branding/logo-${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await db.storage
+        .from(PROJECT_BUCKET)
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = db.storage
+        .from(PROJECT_BUCKET)
+        .getPublicUrl(path);
+
+      const { error: saveError } = await db
+        .from("site_settings")
+        .upsert({
+          id: 1,
+          logo_url: urlData.publicUrl
+        });
+
+      if (saveError) {
+        await db.storage.from(PROJECT_BUCKET).remove([path]);
+        throw saveError;
+      }
+
+      showLogoPreview(urlData.publicUrl);
+
+      $("#logoFile").value = "";
+      $("#logoMessage").textContent =
+        "Logo saved successfully! Your website can now display the new logo.";
+
+      alert("Company logo uploaded and saved successfully!");
+
+    } catch (error) {
+      $("#logoMessage").textContent =
+        "Logo upload failed: " + (error.message || String(error));
+    } finally {
+      button.disabled = false;
+      button.textContent = oldText;
     }
   });
 
+  // RESTORE EXISTING SESSION
+  if (configured) {
+    db.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        user = data.session.user;
+        showDashboard();
+      }
+    });
+  }
+
+  // HTML SAFETY
   function esc(v) {
     return String(v ?? "").replace(/[&<>"']/g, c => ({
       "&": "&amp;",
