@@ -1,3 +1,4 @@
+
 (() => {
   const $ = s => document.querySelector(s);
   const cfg = window.KAVITH_CONFIG || {};
@@ -5,7 +6,7 @@
   const status = $("#connectionStatus");
   let db = null, user = null;
 
-  // The SQL setup created this public Storage bucket.
+  // Use the existing Supabase Storage bucket.
   const PROJECT_BUCKET = "site-media";
 
   if (configured) {
@@ -156,47 +157,140 @@
     else loadProjects();
   }
 
-  // Keep the existing Media Gallery and Settings behavior.
-  // These sections rely on the media/site_settings tables used by the original starter panel.
+  // MEDIA GALLERY
+  // Uses the same existing site-media bucket as Project Photos.
+
   async function loadMedia() {
     const { data, error } = await db.from("media").select("*").order("created_at", { ascending: false });
-    if (error) { $("#mediaList").innerHTML = `<p class="muted">${esc(error.message)}</p>`; return; }
+    if (error) {
+      $("#mediaList").innerHTML = `<p class="muted">${esc(error.message)}</p>`;
+      return;
+    }
+
     $("#mediaCount").textContent = data.length;
     $("#mediaList").innerHTML = data.map(m => `
       <div class="manage-row">
-        <div><b>${esc(m.caption || "Untitled media")}</b><small>${esc(m.media_type)} · ${esc(m.file_name || "")}</small></div>
-        <div><a class="mini-btn" href="${esc(m.public_url)}" target="_blank" rel="noopener">VIEW</a><button class="mini-btn danger" data-media-delete="${m.id}" data-path="${esc(m.storage_path)}">DELETE</button></div>
+        <div>
+          <b>${esc(m.caption || "Untitled media")}</b>
+          <small>${esc(m.media_type)} · ${esc(m.file_name || "")}</small>
+        </div>
+        <div>
+          <a class="mini-btn" href="${esc(m.public_url)}" target="_blank" rel="noopener">VIEW</a>
+          <button class="mini-btn danger" data-media-delete="${m.id}" data-path="${esc(m.storage_path)}">DELETE</button>
+        </div>
       </div>`).join("") || "<p class='muted'>No media uploaded yet.</p>";
-    $("#mediaList").querySelectorAll("[data-media-delete]").forEach(b => b.onclick = () => deleteMedia(b.dataset.mediaDelete, b.dataset.path));
+
+    $("#mediaList").querySelectorAll("[data-media-delete]").forEach(b => {
+      b.onclick = () => deleteMedia(b.dataset.mediaDelete, b.dataset.path);
+    });
   }
 
   $("#mediaForm").addEventListener("submit", async e => {
     e.preventDefault();
+
+    if (!db) {
+      alert("Supabase is not connected.");
+      return;
+    }
+
     const f = $("#mediaFile").files[0];
-    if (!f) return;
-    if (f.size > 100 * 1024 * 1024) { alert("Please keep uploads under 100 MB."); return; }
-    const path = `${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
-    const { error: upErr } = await db.storage.from("construction-media").upload(path, f, { upsert: false });
-    if (upErr) { alert(upErr.message); return; }
-    const { data: urlData } = db.storage.from("construction-media").getPublicUrl(path);
-    const row = { caption: $("#mediaCaption").value, media_type: f.type.startsWith("video/") ? "video" : "photo", file_name: f.name, storage_path: path, public_url: urlData.publicUrl };
-    const { error } = await db.from("media").insert(row);
-    if (error) { alert(error.message); return; }
-    e.target.reset();
-    loadMedia();
+    if (!f) {
+      alert("Please choose a photo or video.");
+      return;
+    }
+
+    if (!f.type.startsWith("image/") && !f.type.startsWith("video/")) {
+      alert("Please choose an image or video file.");
+      return;
+    }
+
+    if (f.size > 100 * 1024 * 1024) {
+      alert("Please keep uploads under 100 MB.");
+      return;
+    }
+
+    const submitButton = e.submitter || $("#mediaForm button[type='submit']");
+    const oldText = submitButton ? submitButton.textContent : "";
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "UPLOADING…";
+    }
+
+    const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `gallery/${Date.now()}-${safeName}`;
+
+    try {
+      // Upload to the existing site-media bucket.
+      const { error: upErr } = await db.storage
+        .from(PROJECT_BUCKET)
+        .upload(path, f, {
+          upsert: false,
+          cacheControl: "3600",
+          contentType: f.type
+        });
+
+      if (upErr) throw upErr;
+
+      const { data: urlData } = db.storage
+        .from(PROJECT_BUCKET)
+        .getPublicUrl(path);
+
+      const row = {
+        caption: $("#mediaCaption").value.trim(),
+        media_type: f.type.startsWith("video/") ? "video" : "photo",
+        file_name: f.name,
+        storage_path: path,
+        public_url: urlData.publicUrl
+      };
+
+      const { error } = await db.from("media").insert(row);
+
+      if (error) {
+        await db.storage.from(PROJECT_BUCKET).remove([path]);
+        throw error;
+      }
+
+      e.target.reset();
+      await loadMedia();
+      alert("Media uploaded successfully!");
+    } catch (error) {
+      alert("Media upload failed: " + (error.message || String(error)));
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = oldText;
+      }
+    }
   });
 
   async function deleteMedia(id, path) {
     if (!confirm("Delete this media item?")) return;
-    const { error: storageErr } = await db.storage.from("construction-media").remove([path]);
-    if (storageErr) { alert(storageErr.message); return; }
+
+    const { error: storageErr } = await db.storage
+      .from(PROJECT_BUCKET)
+      .remove([path]);
+
+    if (storageErr) {
+      alert(storageErr.message);
+      return;
+    }
+
     const { error } = await db.from("media").delete().eq("id", id);
-    if (error) alert(error.message); else loadMedia();
+
+    if (error) {
+      alert(error.message);
+    } else {
+      await loadMedia();
+    }
   }
+
+  // WEBSITE SETTINGS
 
   async function loadSettings() {
     const { data, error } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
     if (error) return;
+
     if (data) {
       $("#settingPhone").value = data.phone || "";
       $("#settingEmail").value = data.email || "";
@@ -206,16 +300,32 @@
 
   $("#settingsForm").addEventListener("submit", async e => {
     e.preventDefault();
-    const row = { id: 1, phone: $("#settingPhone").value, email: $("#settingEmail").value, location: $("#settingLocation").value };
+
+    const row = {
+      id: 1,
+      phone: $("#settingPhone").value,
+      email: $("#settingEmail").value,
+      location: $("#settingLocation").value
+    };
+
     const { error } = await db.from("site_settings").upsert(row);
     $("#settingsMessage").textContent = error ? error.message : "Settings saved successfully.";
   });
 
   if (configured) db.auth.getSession().then(({ data }) => {
-    if (data.session) { user = data.session.user; showDashboard(); }
+    if (data.session) {
+      user = data.session.user;
+      showDashboard();
+    }
   });
 
   function esc(v) {
-    return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    return String(v ?? "").replace(/[&<>"']/g, c => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[c]));
   }
 })();
