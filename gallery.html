@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +19,6 @@
       color: #171717;
     }
 
-    /* LOGO AND BRAND COLOUR */
     .gallery-page .brand {
       display: inline-flex;
       align-items: center;
@@ -532,7 +532,7 @@
     let activeFilter = "all";
     let currentIndex = 0;
 
-    // Load the same logo used by the main website
+    // Load company logo
     async function loadWebsiteLogo() {
       const config = window.KAVITH_CONFIG || {};
 
@@ -551,7 +551,7 @@
         const { data, error } = await client
           .from("site_settings")
           .select("logo_url")
-          .limit(1)
+          .eq("id", 1)
           .maybeSingle();
 
         if (error) throw error;
@@ -692,7 +692,7 @@
       info.className = "gallery-item-info";
 
       const small = document.createElement("small");
-      small.textContent = category || "Project";
+      small.textContent = "Construction";
 
       const strong = document.createElement("strong");
       strong.textContent = caption || "KAVITH CONSTRUCTION";
@@ -715,7 +715,7 @@
 
     activateSamples();
 
-    // Load uploaded photos from Supabase Media Gallery
+    // Load ONLY photos uploaded through the new Admin Panel Gallery
     async function loadUploadedPhotos() {
       const config = window.KAVITH_CONFIG || {};
 
@@ -736,7 +736,7 @@
         );
 
         const { data, error } = await client
-          .from("media")
+          .from("gallery_photos")
           .select("*")
           .order("created_at", { ascending: false });
 
@@ -744,36 +744,18 @@
 
         if (data) {
           data.forEach(photo => {
-            const url = photo.public_url;
-            if (!url) return;
-
-            const rawCategory = (
-              photo.media_type || photo.caption || "construction"
-            ).toLowerCase();
-
-            let category = "construction";
-
-            if (
-              rawCategory.includes("residential") ||
-              rawCategory.includes("house")
-            ) {
-              category = "residential";
-            } else if (rawCategory.includes("interior")) {
-              category = "interior";
-            } else if (rawCategory.includes("commercial")) {
-              category = "commercial";
-            }
+            if (!photo.public_url) return;
 
             addImage(
-              url,
+              photo.public_url,
               photo.caption || photo.file_name || "Construction Project",
-              category
+              "construction"
             );
           });
         }
 
       } catch (error) {
-        console.error("Gallery loading error:", error);
+        console.error("Website Gallery loading error:", error);
       } finally {
         $("#galleryLoading")?.remove();
         updateCount();
@@ -787,4 +769,3 @@
 
 </body>
 </html>
-```
