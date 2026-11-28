@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="assets/style.css">
 
   <style>
-    /* PAGE FADE-IN */
+    /* PAGE FADE-IN - NO TRANSFORM BUG */
     .gallery-page {
       min-height: 100vh;
       background: #151515 !important;
@@ -22,8 +22,8 @@
     }
 
     @keyframes galleryPageEnter {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* HEADER */
@@ -79,7 +79,7 @@
       color: #ffffff !important;
     }
 
-    /* FILTER BUTTONS - MOVE UP */
+    /* FILTER BUTTONS */
     .gallery-toolbar {
       display: flex;
       align-items: center;
@@ -239,21 +239,22 @@
       margin-bottom: 25px;
     }
 
-    /* PHOTO VIEWER - FIXED CENTER AND FULL IMAGE */
+    /* PHOTO VIEWER - FIXED TO SCREEN */
     .gallery-viewer {
       position: fixed !important;
-      z-index: 99999 !important;
+      z-index: 2147483647 !important;
       inset: 0 !important;
-      width: 100% !important;
+      width: 100vw !important;
       height: 100vh !important;
       height: 100dvh !important;
       box-sizing: border-box !important;
-      background: rgba(0,0,0,.97);
+      background: rgba(0,0,0,.97) !important;
       display: none;
       align-items: center !important;
       justify-content: center !important;
       padding: 75px 85px 85px !important;
       overflow: hidden !important;
+      isolation: isolate;
     }
 
     .gallery-viewer.open {
@@ -261,6 +262,7 @@
     }
 
     .gallery-viewer .viewer-image {
+      position: relative !important;
       display: block !important;
       width: auto !important;
       height: auto !important;
@@ -268,19 +270,20 @@
       max-height: 100% !important;
       object-fit: contain !important;
       object-position: center center !important;
-      margin: auto !important;
+      margin: 0 auto !important;
       flex: 0 1 auto !important;
       min-width: 0 !important;
       min-height: 0 !important;
-      animation: viewerZoom .3s ease;
+      transform: none !important;
+      animation: viewerZoom .25s ease;
     }
 
-    /* VIEWER BUTTONS */
-    .viewer-close,
-    .viewer-prev,
-    .viewer-next {
-      position: absolute;
-      z-index: 10;
+    /* VIEWER CONTROLS */
+    .gallery-viewer .viewer-close,
+    .gallery-viewer .viewer-prev,
+    .gallery-viewer .viewer-next {
+      position: absolute !important;
+      z-index: 20 !important;
       border: 0;
       background: rgba(255,255,255,.12);
       color: white;
@@ -289,15 +292,15 @@
       height: 48px;
       border-radius: 50%;
       font-size: 27px;
-      transition: .2s;
+      transition: background .2s, color .2s;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .viewer-close:hover,
-    .viewer-prev:hover,
-    .viewer-next:hover {
+    .gallery-viewer .viewer-close:hover,
+    .gallery-viewer .viewer-prev:hover,
+    .gallery-viewer .viewer-next:hover {
       background: #c99c43;
       color: #111;
     }
@@ -322,8 +325,8 @@
     }
 
     .gallery-viewer .viewer-caption {
-      position: absolute;
-      z-index: 10;
+      position: absolute !important;
+      z-index: 20 !important;
       bottom: 18px !important;
       left: 70px !important;
       right: 70px !important;
@@ -338,8 +341,8 @@
     }
 
     @keyframes viewerZoom {
-      from { opacity: 0; transform: scale(.96); }
-      to { opacity: 1; transform: scale(1); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* TABLET AND MOBILE */
@@ -499,7 +502,7 @@
     </div>
   </footer>
 
-  <div class="gallery-viewer" id="galleryViewer" aria-label="Photo viewer">
+  <div class="gallery-viewer" id="galleryViewer" aria-label="Photo viewer" aria-modal="true" role="dialog">
     <button class="viewer-close" id="viewerClose" aria-label="Close">×</button>
     <button class="viewer-prev" id="viewerPrev" aria-label="Previous photo">‹</button>
     <img class="viewer-image" id="viewerImage" src="" alt="Gallery photo">
@@ -520,6 +523,7 @@
     const viewerCaption = $("#viewerCaption");
 
     let currentIndex = 0;
+    let previousScrollY = 0;
 
     async function loadWebsiteLogo() {
       const config = window.KAVITH_CONFIG || {};
@@ -604,14 +608,24 @@
     function openViewer(item) {
       const items = getVisibleItems();
       currentIndex = items.indexOf(item);
+      if (currentIndex < 0) return;
+
       showViewerImage();
+
+      /* Keep viewer fixed to viewport, independent of page scroll */
+      previousScrollY = window.scrollY;
+
       viewer.classList.add("open");
+      document.body.classList.add("gallery-viewer-active");
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
     }
 
     function closeViewer() {
       viewer.classList.remove("open");
+      document.body.classList.remove("gallery-viewer-active");
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     }
 
     function moveViewer(direction) {
