@@ -81,6 +81,7 @@
     await Promise.all([
       loadProjects(),
       loadMedia(),
+      loadGallery(),
       loadSettings(),
       loadLogo()
     ]);
@@ -254,7 +255,7 @@
     else loadProjects();
   }
 
-  // MEDIA GALLERY
+  // EXISTING MEDIA GALLERY - UNCHANGED
   async function loadMedia() {
     const { data, error } = await db
       .from("media")
@@ -398,6 +399,183 @@
     }
   }
 
+  // NEW SEPARATE WEBSITE GALLERY
+  async function loadGallery() {
+    const list = $("#websiteGalleryList");
+    if (!list) return;
+
+    const { data, error } = await db
+      .from("gallery_photos")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      list.innerHTML =
+        `<p class="muted">Could not load Gallery photos: ${esc(error.message)}</p>`;
+      return;
+    }
+
+    list.innerHTML = data.map(photo => `
+      <div class="manage-row">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img
+            src="${esc(photo.public_url)}"
+            alt="Gallery photo"
+            style="width:75px;height:65px;object-fit:cover;border-radius:5px;">
+          <div>
+            <b>${esc(photo.caption || "Gallery Photo")}</b>
+            <small>${esc(photo.file_name || "")}</small>
+          </div>
+        </div>
+        <div>
+          <a class="mini-btn"
+             href="${esc(photo.public_url)}"
+             target="_blank"
+             rel="noopener">VIEW</a>
+          <button
+            class="mini-btn danger"
+            data-gallery-delete="${esc(photo.id)}"
+            data-gallery-path="${esc(photo.storage_path)}">
+            DELETE
+          </button>
+        </div>
+      </div>
+    `).join("") || "<p class='muted'>No Gallery photos uploaded yet.</p>";
+
+    list.querySelectorAll("[data-gallery-delete]").forEach(button => {
+      button.onclick = () => deleteGalleryPhoto(
+        button.dataset.galleryDelete,
+        button.dataset.galleryPath
+      );
+    });
+  }
+
+  // UPLOAD GALLERY PHOTO
+  $("#galleryUploadForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    if (!db) {
+      alert("Supabase is not connected.");
+      return;
+    }
+
+    const file = $("#galleryPhotoFile").files[0];
+
+    if (!file) {
+      $("#galleryUploadMessage").textContent =
+        "Please choose a photo.";
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      $("#galleryUploadMessage").textContent =
+        "Please choose an image file.";
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      $("#galleryUploadMessage").textContent =
+        "Please choose a photo smaller than 20 MB.";
+      return;
+    }
+
+    const button = $("#galleryUploadBtn");
+    const oldText = button.textContent;
+
+    button.disabled = true;
+    button.textContent = "UPLOADING…";
+    $("#galleryUploadMessage").textContent =
+      "Uploading your photo. Please wait…";
+
+    let uploadedPath = "";
+
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+
+      // Separate folder for the new Gallery only.
+      uploadedPath =
+        `website-gallery/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await db.storage
+        .from(PROJECT_BUCKET)
+        .upload(uploadedPath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = db.storage
+        .from(PROJECT_BUCKET)
+        .getPublicUrl(uploadedPath);
+
+      const row = {
+        caption: $("#galleryPhotoCaption").value.trim(),
+        category: "construction",
+        file_name: file.name,
+        storage_path: uploadedPath,
+        public_url: urlData.publicUrl
+      };
+
+      const { error: insertError } = await db
+        .from("gallery_photos")
+        .insert(row);
+
+      if (insertError) throw insertError;
+
+      e.target.reset();
+
+      $("#galleryUploadMessage").textContent =
+        "Photo uploaded successfully!";
+
+      await loadGallery();
+
+    } catch (error) {
+      if (uploadedPath) {
+        await db.storage
+          .from(PROJECT_BUCKET)
+          .remove([uploadedPath]);
+      }
+
+      $("#galleryUploadMessage").textContent =
+        "Gallery upload failed: " +
+        (error.message || String(error));
+
+    } finally {
+      button.disabled = false;
+      button.textContent = oldText;
+    }
+  });
+
+  // DELETE GALLERY PHOTO
+  async function deleteGalleryPhoto(id, path) {
+    if (!confirm("Delete this Gallery photo?")) return;
+
+    const { error: deleteError } = await db
+      .from("gallery_photos")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      alert("Could not delete photo: " + deleteError.message);
+      return;
+    }
+
+    const { error: storageError } = await db.storage
+      .from(PROJECT_BUCKET)
+      .remove([path]);
+
+    if (storageError) {
+      alert(
+        "Photo record deleted, but the storage file could not be removed: " +
+        storageError.message
+      );
+    }
+
+    await loadGallery();
+  }
+
   // WEBSITE SETTINGS
   async function loadSettings() {
     const { data, error } = await db
@@ -531,7 +709,6 @@
 
       const logoUrl = urlData.publicUrl;
 
-      // Update only logo_url, preserving phone, email and location.
       const { data: existing, error: readError } = await db
         .from("site_settings")
         .select("id")
