@@ -10,9 +10,56 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
+
+  <style>
+    /* Smooth page transition */
+    #pageTransition {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: #101010;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .4s ease, visibility .4s ease;
+    }
+
+    #pageTransition.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: all;
+    }
+
+    body {
+      animation: homepageEnter .65s ease both;
+    }
+
+    @keyframes homepageEnter {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body {
+        animation: none;
+      }
+
+      #pageTransition {
+        transition: none;
+      }
+    }
+  </style>
 </head>
 
 <body>
+
+  <div id="pageTransition"></div>
 
   <div class="topbar">
     <div class="wrap topbar-inner">
@@ -299,6 +346,52 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/config.js"></script>
   <script src="assets/app.js"></script>
+
+  <script>
+    // Smooth transition when opening Gallery
+    (() => {
+      const overlay = document.getElementById("pageTransition");
+
+      if (!overlay) return;
+
+      document.addEventListener("click", function(event) {
+        const link = event.target.closest('a[href]');
+
+        if (!link) return;
+
+        const href = link.getAttribute("href");
+
+        if (!href) return;
+
+        // Only animate links that open gallery.html
+        const isGalleryLink =
+          href === "gallery.html" ||
+          href.startsWith("./gallery.html") ||
+          href.startsWith("gallery.html?") ||
+          href.startsWith("gallery.html#");
+
+        if (!isGalleryLink) return;
+
+        // Keep normal browser actions working
+        if (
+          event.button !== 0 ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey ||
+          event.metaKey ||
+          link.target === "_blank"
+        ) return;
+
+        event.preventDefault();
+
+        overlay.classList.add("active");
+
+        setTimeout(() => {
+          window.location.href = link.href;
+        }, 420);
+      });
+    })();
+  </script>
 
 </body>
 </html>
