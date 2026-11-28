@@ -20,6 +20,7 @@
       <button class="active" data-tab="overview">▦ &nbsp; Overview</button>
       <button data-tab="projects">▧ &nbsp; Projects</button>
       <button data-tab="media">▣ &nbsp; Media Gallery</button>
+      <button data-tab="gallery">▣ &nbsp; Gallery</button>
       <button data-tab="settings">⚙ &nbsp; Website Settings</button>
       <button data-tab="logo">▣ &nbsp; Logo Manager</button>
     </div>
@@ -57,6 +58,7 @@
 
     <section id="dashboard" class="dashboard hidden">
 
+      <!-- OVERVIEW -->
       <div class="dash-tab active" id="tab-overview">
         <div class="stat-grid">
           <div class="stat-card"><span>PROJECTS</span><strong id="projectCount">0</strong></div>
@@ -70,6 +72,7 @@
         </div>
       </div>
 
+      <!-- PROJECTS -->
       <div class="dash-tab" id="tab-projects">
         <div class="panel">
           <div class="panel-head">
@@ -93,6 +96,7 @@
         </div>
       </div>
 
+      <!-- EXISTING MEDIA GALLERY -->
       <div class="dash-tab" id="tab-media">
         <div class="panel">
           <div class="panel-head">
@@ -108,6 +112,47 @@
         </div>
       </div>
 
+      <!-- NEW SEPARATE GALLERY -->
+      <div class="dash-tab" id="tab-gallery">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Website Gallery</h2>
+              <p>Upload photos that appear only on the separate Gallery page.</p>
+            </div>
+          </div>
+
+          <form id="galleryUploadForm" class="admin-form">
+            <label class="wide">
+              Choose Gallery Photo
+              <input
+                type="file"
+                id="galleryPhotoFile"
+                accept="image/*"
+                required>
+            </label>
+
+            <label class="wide">
+              Photo Caption (Optional)
+              <input
+                type="text"
+                id="galleryPhotoCaption"
+                placeholder="e.g. Modern House Construction">
+            </label>
+
+            <div class="wide">
+              <button class="btn gold" type="submit" id="galleryUploadBtn">
+                UPLOAD PHOTO
+              </button>
+            </div>
+          </form>
+
+          <p id="galleryUploadMessage" class="form-note"></p>
+          <div id="websiteGalleryList" class="manage-list"></div>
+        </div>
+      </div>
+
+      <!-- WEBSITE SETTINGS -->
       <div class="dash-tab" id="tab-settings">
         <div class="panel">
           <h2>Website Settings</h2>
