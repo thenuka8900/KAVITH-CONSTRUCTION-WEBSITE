@@ -2,19 +2,28 @@
 (() => {
   const $ = s => document.querySelector(s);
 
-  $("#year").textContent = new Date().getFullYear();
+  // CURRENT YEAR
+  if ($("#year")) {
+    $("#year").textContent = new Date().getFullYear();
+  }
 
-  $("#menuToggle").addEventListener("click", () => {
-    $("#mainNav").classList.toggle("open");
-  });
-
-  document.querySelectorAll("#mainNav a").forEach(a => {
-    a.addEventListener("click", () => {
-      $("#mainNav").classList.remove("open");
+  // MOBILE MENU
+  if ($("#menuToggle") && $("#mainNav")) {
+    $("#menuToggle").addEventListener("click", () => {
+      $("#mainNav").classList.toggle("open");
     });
-  });
+
+    document.querySelectorAll("#mainNav a").forEach(a => {
+      a.addEventListener("click", () => {
+        $("#mainNav").classList.remove("open");
+      });
+    });
+  }
 
   const cfg = window.KAVITH_CONFIG || {};
+
+  // COMPANY EMAIL
+  const COMPANY_EMAIL = "kavithconstruction1@gmail.com";
 
   const connected =
     window.supabase &&
@@ -37,19 +46,19 @@
       .then(({ data, error }) => {
         if (error || !data) return;
 
-        if (data.phone) {
+        if (data.phone && $("#phoneText")) {
           $("#phoneText").textContent = data.phone;
         }
 
-        if (data.email) {
+        if (data.email && $("#emailText")) {
           $("#emailText").textContent = data.email;
         }
 
-        if (data.location) {
+        if (data.location && $("#locationText")) {
           $("#locationText").textContent = data.location;
         }
 
-        // Automatically update Header and Footer logos
+        // AUTOMATIC HEADER AND FOOTER LOGO
         if (data.logo_url) {
           document.querySelectorAll(".brand-mark").forEach(mark => {
             const logo = document.createElement("img");
@@ -71,8 +80,13 @@
     db.from("projects")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length) {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Projects loading error:", error);
+          return;
+        }
+
+        if (data && data.length && $("#projectGrid")) {
           $("#projectGrid").innerHTML = data.map(p => `
             <article class="project-card">
               ${p.image_url
@@ -88,12 +102,17 @@
         }
       });
 
-    // MEDIA GALLERY
+    // EXISTING MEDIA GALLERY
     db.from("media")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length) {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Media gallery loading error:", error);
+          return;
+        }
+
+        if (data && data.length && $("#galleryGrid")) {
           $("#galleryGrid").innerHTML = data.map(m =>
             m.media_type === "video"
               ? `<video controls src="${esc(m.public_url)}"></video>`
@@ -103,29 +122,52 @@
       });
   }
 
-  // CONTACT FORM
-  $("#contactForm").addEventListener("submit", e => {
-    e.preventDefault();
+  // CONTACT FORM - KAVITH CONSTRUCTION
+  const contactForm = $("#contactForm");
 
-    const d = new FormData(e.currentTarget);
+  if (contactForm) {
+    contactForm.addEventListener("submit", e => {
+      e.preventDefault();
 
-    const subject = encodeURIComponent(
-      "Website enquiry — KAVITH CONSTRUCTION"
-    );
+      const d = new FormData(contactForm);
 
-    const body = encodeURIComponent(
-      `Name: ${d.get("name")}\nContact: ${d.get("contact")}\n\nProject:\n${d.get("message")}`
-    );
+      const name = String(d.get("name") || "").trim();
+      const contact = String(d.get("contact") || "").trim();
+      const message = String(d.get("message") || "").trim();
 
-    if (cfg.contactEmail && !cfg.contactEmail.includes("example.com")) {
-      location.href =
-        `mailto:${cfg.contactEmail}?subject=${subject}&body=${body}`;
-    } else {
-      $("#formNote").textContent =
-        "Please configure the company email in assets/config.js. Your enquiry details are ready in the form.";
-    }
-  });
+      if (!name || !contact || !message) {
+        if ($("#formNote")) {
+          $("#formNote").textContent =
+            "Please fill in all required fields.";
+        }
+        return;
+      }
 
+      const subject = encodeURIComponent(
+        "New Website Enquiry - KAVITH CONSTRUCTION"
+      );
+
+      const body = encodeURIComponent(
+        `NEW WEBSITE ENQUIRY\n\n` +
+        `Company: KAVITH CONSTRUCTION\n\n` +
+        `Name: ${name}\n` +
+        `Contact: ${contact}\n\n` +
+        `Project Details:\n${message}\n\n` +
+        `Sent from KAVITH CONSTRUCTION Website`
+      );
+
+      if ($("#formNote")) {
+        $("#formNote").textContent =
+          "Opening your email application. Please press Send to submit your enquiry.";
+      }
+
+      // OPEN EMAIL TO YOUR GMAIL ADDRESS
+      window.location.href =
+        `mailto:${COMPANY_EMAIL}?subject=${subject}&body=${body}`;
+    });
+  }
+
+  // SAFE HTML TEXT
   function esc(v) {
     return String(v ?? "").replace(/[&<>"']/g, c => ({
       "&": "&amp;",
@@ -135,4 +177,5 @@
       "'": "&#39;"
     }[c]));
   }
+
 })();
