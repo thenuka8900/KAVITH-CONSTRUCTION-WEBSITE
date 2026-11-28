@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,6 +17,44 @@
       min-height: 100vh;
       background: #f7f6f2;
       color: #171717;
+    }
+
+    /* LOGO AND BRAND COLOUR */
+    .gallery-page .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff !important;
+      text-decoration: none;
+    }
+
+    .gallery-page .brand-name {
+      color: #fff !important;
+      font-family: Manrope, sans-serif;
+      font-weight: 800;
+    }
+
+    .gallery-page .brand-name b {
+      color: #fff !important;
+    }
+
+    .gallery-page .brand-name small {
+      display: block;
+      color: #d6a94e !important;
+    }
+
+    .gallery-page .brand-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .gallery-page .brand-logo {
+      width: 55px;
+      height: 55px;
+      object-fit: contain;
+      display: block;
     }
 
     .gallery-hero {
@@ -351,8 +389,9 @@
     <div class="wrap nav">
 
       <a class="brand" href="index.html">
-        <span class="brand-mark">KC</span>
-        <span>KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
+        <span class="brand-mark" data-brand-fallback>KC</span>
+        <img class="brand-logo" data-site-logo alt="KAVITH CONSTRUCTION Logo" hidden>
+        <span class="brand-name">KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
       </a>
 
       <button class="menu-toggle" aria-label="Open menu" id="menuToggle">☰</button>
@@ -461,8 +500,9 @@
   <footer>
     <div class="wrap footer-inner">
       <a class="brand" href="index.html">
-        <span class="brand-mark">KC</span>
-        <span>KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
+        <span class="brand-mark" data-brand-fallback>KC</span>
+        <img class="brand-logo" data-site-logo alt="KAVITH CONSTRUCTION Logo" hidden>
+        <span class="brand-name">KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
       </a>
 
       <p>© <span id="year"></span> KAVITH CONSTRUCTION. ALL RIGHTS RESERVED.</p>
@@ -470,7 +510,6 @@
     </div>
   </footer>
 
-  <!-- FULL SCREEN PHOTO VIEWER -->
   <div class="gallery-viewer" id="galleryViewer" aria-label="Photo viewer">
     <button class="viewer-close" id="viewerClose" aria-label="Close">×</button>
     <button class="viewer-prev" id="viewerPrev" aria-label="Previous photo">‹</button>
@@ -494,6 +533,53 @@
     let activeFilter = "all";
     let currentIndex = 0;
 
+    // Load the same logo used by the main website
+    async function loadWebsiteLogo() {
+      const config = window.KAVITH_CONFIG || {};
+
+      if (
+        !window.supabase ||
+        !config.supabaseUrl ||
+        !config.supabaseAnonKey
+      ) return;
+
+      try {
+        const client = window.supabase.createClient(
+          config.supabaseUrl,
+          config.supabaseAnonKey
+        );
+
+        const { data, error } = await client
+          .from("site_settings")
+          .select("logo_url")
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const logoUrl = data?.logo_url;
+        if (!logoUrl) return;
+
+        document.querySelectorAll("[data-site-logo]").forEach(img => {
+          img.src = logoUrl;
+          img.hidden = false;
+
+          img.onerror = () => {
+            img.hidden = true;
+          };
+        });
+
+        document.querySelectorAll("[data-brand-fallback]").forEach(mark => {
+          mark.hidden = true;
+        });
+
+      } catch (error) {
+        console.error("Website logo loading error:", error);
+      }
+    }
+
+    loadWebsiteLogo();
+
     // Mobile navigation
     $("#menuToggle")?.addEventListener("click", () => {
       $("#mainNav")?.classList.toggle("open");
@@ -509,6 +595,7 @@
     function updateCount() {
       $("#galleryCount").textContent =
         getVisibleItems().length + " PHOTOS";
+
       $("#galleryEmpty").classList.toggle(
         "show",
         getVisibleItems().length === 0
@@ -551,8 +638,10 @@
 
       const item = items[currentIndex];
       const img = item.querySelector("img");
+
       viewerImage.src = img.src;
       viewerImage.alt = img.alt;
+
       viewerCaption.textContent =
         item.querySelector("strong")?.textContent || img.alt;
     }
@@ -617,11 +706,11 @@
       $("#galleryEmpty").before(item);
     }
 
-    // Open local sample photos
     function activateSamples() {
       gallery.querySelectorAll(".gallery-item").forEach(item => {
         item.addEventListener("click", () => openViewer(item));
       });
+
       updateCount();
     }
 
@@ -657,7 +746,6 @@
         if (data) {
           data.forEach(photo => {
             const url = photo.public_url;
-
             if (!url) return;
 
             const rawCategory = (
@@ -666,7 +754,10 @@
 
             let category = "construction";
 
-            if (rawCategory.includes("residential") || rawCategory.includes("house")) {
+            if (
+              rawCategory.includes("residential") ||
+              rawCategory.includes("house")
+            ) {
               category = "residential";
             } else if (rawCategory.includes("interior")) {
               category = "interior";
@@ -697,3 +788,4 @@
 
 </body>
 </html>
+```
