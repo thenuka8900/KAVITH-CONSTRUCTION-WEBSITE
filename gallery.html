@@ -19,7 +19,6 @@
       color: #ffffff !important;
     }
 
-    /* Header and footer: hide KC fallback marks */
     .gallery-page .brand-mark,
     .gallery-page [data-brand-fallback] {
       display: none !important;
@@ -40,7 +39,6 @@
       display: block;
     }
 
-    /* Show company name beside logo */
     .gallery-page .brand-name {
       display: inline-block !important;
       color: #ffffff !important;
@@ -62,13 +60,11 @@
       margin-top: 5px;
     }
 
-    /* Gallery section dark background */
     .gallery-page .section {
       background: #151515 !important;
       color: #ffffff !important;
     }
 
-    /* Gallery toolbar */
     .gallery-toolbar {
       display: flex;
       align-items: center;
@@ -107,7 +103,6 @@
       font-size: 13px;
     }
 
-    /* Photo grid */
     .premium-gallery {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -205,7 +200,6 @@
       display: block;
     }
 
-    /* Footer */
     .gallery-bottom {
       background: #111;
       color: white;
@@ -228,7 +222,6 @@
       margin-bottom: 25px;
     }
 
-    /* Fullscreen photo viewer */
     .gallery-viewer {
       position: fixed;
       z-index: 99999;
@@ -416,12 +409,15 @@
 
   <footer>
     <div class="wrap footer-inner">
+
       <a class="brand" href="index.html" aria-label="KAVITH CONSTRUCTION Home">
         <img class="brand-logo" data-site-logo alt="KAVITH CONSTRUCTION Logo" hidden>
+        <span class="brand-name">KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
       </a>
 
       <p>© <span id="year"></span> KAVITH CONSTRUCTION. ALL RIGHTS RESERVED.</p>
       <a href="index.html">BACK TO HOME ↗</a>
+
     </div>
   </footer>
 
@@ -447,7 +443,6 @@
 
     let currentIndex = 0;
 
-    // Load the uploaded company logo
     async function loadWebsiteLogo() {
       const config = window.KAVITH_CONFIG || {};
 
@@ -496,7 +491,6 @@
       $("#galleryEmpty").classList.toggle("show", getVisibleItems().length === 0);
     }
 
-    // Filters
     document.querySelectorAll(".gallery-filter").forEach(button => {
       button.addEventListener("click", () => {
         const filter = button.dataset.filter;
@@ -514,7 +508,6 @@
       });
     });
 
-    // Viewer
     function showViewerImage() {
       const items = getVisibleItems();
       if (!items.length) return;
@@ -564,7 +557,6 @@
       if (event.key === "ArrowRight") moveViewer(1);
     });
 
-    // Add uploaded photos
     function addImage(url, caption) {
       if (!url) return;
 
@@ -594,7 +586,6 @@
       $("#galleryEmpty").before(item);
     }
 
-    // Load only photos from the separate Admin Panel Gallery
     async function loadUploadedPhotos() {
       const config = window.KAVITH_CONFIG || {};
 
