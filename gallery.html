@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="assets/style.css">
 
   <style>
-    /* PAGE FADE-IN ANIMATION */
+    /* PAGE FADE-IN */
     .gallery-page {
       min-height: 100vh;
       background: #151515 !important;
@@ -22,29 +22,15 @@
     }
 
     @keyframes galleryPageEnter {
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* NAVIGATION BUTTONS - MOVE SLIGHTLY UP */
+    /* HEADER */
     .gallery-page .header .nav {
       align-items: center;
       padding-top: 0 !important;
       padding-bottom: 7px !important;
-    }
-
-    .gallery-page .header nav {
-      transform: translateY(-7px);
-    }
-
-    .gallery-page .header .menu-toggle {
-      transform: translateY(-5px);
     }
 
     .gallery-page .brand-mark,
@@ -93,13 +79,14 @@
       color: #ffffff !important;
     }
 
+    /* FILTER BUTTONS - MOVE UP */
     .gallery-toolbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 20px;
       flex-wrap: wrap;
-      margin: 35px 0 30px;
+      margin: 12px 0 30px !important;
     }
 
     .gallery-filters {
@@ -131,6 +118,7 @@
       font-size: 13px;
     }
 
+    /* GALLERY GRID */
     .premium-gallery {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -228,6 +216,7 @@
       display: block;
     }
 
+    /* BOTTOM SECTION */
     .gallery-bottom {
       background: #111;
       color: white;
@@ -250,32 +239,48 @@
       margin-bottom: 25px;
     }
 
+    /* PHOTO VIEWER - FIXED CENTER AND FULL IMAGE */
     .gallery-viewer {
-      position: fixed;
-      z-index: 99999;
-      inset: 0;
-      background: rgba(0,0,0,.96);
+      position: fixed !important;
+      z-index: 99999 !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      box-sizing: border-box !important;
+      background: rgba(0,0,0,.97);
       display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 65px 70px;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 75px 85px 85px !important;
+      overflow: hidden !important;
     }
 
     .gallery-viewer.open {
-      display: flex;
+      display: flex !important;
     }
 
-    .viewer-image {
-      max-width: 100%;
-      max-height: 82vh;
-      object-fit: contain;
+    .gallery-viewer .viewer-image {
+      display: block !important;
+      width: auto !important;
+      height: auto !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: contain !important;
+      object-position: center center !important;
+      margin: auto !important;
+      flex: 0 1 auto !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
       animation: viewerZoom .3s ease;
     }
 
+    /* VIEWER BUTTONS */
     .viewer-close,
     .viewer-prev,
     .viewer-next {
       position: absolute;
+      z-index: 10;
       border: 0;
       background: rgba(255,255,255,.12);
       color: white;
@@ -285,6 +290,9 @@
       border-radius: 50%;
       font-size: 27px;
       transition: .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .viewer-close:hover,
@@ -294,45 +302,47 @@
       color: #111;
     }
 
-    .viewer-close {
-      top: 22px;
-      right: 25px;
+    .gallery-viewer .viewer-close {
+      top: 18px !important;
+      right: 20px !important;
     }
 
-    .viewer-prev {
-      left: 20px;
+    .gallery-viewer .viewer-prev,
+    .gallery-viewer .viewer-next {
+      top: 50% !important;
+      transform: translateY(-50%) !important;
     }
 
-    .viewer-next {
-      right: 20px;
+    .gallery-viewer .viewer-prev {
+      left: 15px !important;
     }
 
-    .viewer-caption {
+    .gallery-viewer .viewer-next {
+      right: 15px !important;
+    }
+
+    .gallery-viewer .viewer-caption {
       position: absolute;
-      bottom: 20px;
+      z-index: 10;
+      bottom: 18px !important;
+      left: 70px !important;
+      right: 70px !important;
       color: white;
       font-size: 13px;
       text-align: center;
+      pointer-events: none;
     }
 
     @keyframes galleryReveal {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     @keyframes viewerZoom {
-      from {
-        opacity: 0;
-        transform: scale(.94);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
+      from { opacity: 0; transform: scale(.96); }
+      to { opacity: 1; transform: scale(1); }
     }
 
+    /* TABLET AND MOBILE */
     @media(max-width: 750px) {
       .premium-gallery {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -345,19 +355,7 @@
       }
 
       .gallery-toolbar {
-        margin-top: 25px;
-      }
-
-      .gallery-viewer {
-        padding: 60px 15px;
-      }
-
-      .viewer-prev {
-        left: 5px;
-      }
-
-      .viewer-next {
-        right: 5px;
+        margin-top: 10px !important;
       }
 
       .gallery-page .brand-logo {
@@ -369,12 +367,21 @@
         font-size: 14px;
       }
 
-      .gallery-page .header nav {
-        transform: none;
+      .gallery-viewer {
+        padding: 65px 55px 80px !important;
       }
 
-      .gallery-page .header .menu-toggle {
-        transform: translateY(-3px);
+      .gallery-viewer .viewer-prev {
+        left: 3px !important;
+      }
+
+      .gallery-viewer .viewer-next {
+        right: 3px !important;
+      }
+
+      .gallery-viewer .viewer-caption {
+        left: 45px !important;
+        right: 45px !important;
       }
     }
 
@@ -390,6 +397,17 @@
 
       .gallery-item-info strong {
         font-size: 14px;
+      }
+
+      .gallery-viewer {
+        padding: 65px 43px 80px !important;
+      }
+
+      .gallery-viewer .viewer-prev,
+      .gallery-viewer .viewer-next {
+        width: 36px;
+        height: 36px;
+        font-size: 23px;
       }
     }
 
