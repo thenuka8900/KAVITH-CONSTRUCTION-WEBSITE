@@ -1,0 +1,699 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Explore the KAVITH CONSTRUCTION project and architecture photo gallery.">
+  <meta name="theme-color" content="#101010">
+  <title>Our Gallery | KAVITH CONSTRUCTION</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+
+  <style>
+    .gallery-page {
+      min-height: 100vh;
+      background: #f7f6f2;
+      color: #171717;
+    }
+
+    .gallery-hero {
+      position: relative;
+      min-height: 430px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,.88), rgba(0,0,0,.38)),
+        url("https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2000&q=90") center/cover;
+    }
+
+    .gallery-hero-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      padding-top: 80px;
+      padding-bottom: 80px;
+      color: white;
+    }
+
+    .gallery-hero h1 {
+      font-family: Manrope, sans-serif;
+      font-size: clamp(48px, 8vw, 92px);
+      line-height: .98;
+      letter-spacing: -4px;
+      margin: 25px 0;
+      font-weight: 800;
+    }
+
+    .gallery-hero h1 em {
+      color: #d6a94e;
+      font-style: normal;
+    }
+
+    .gallery-hero p:not(.eyebrow) {
+      max-width: 560px;
+      color: rgba(255,255,255,.78);
+      line-height: 1.8;
+    }
+
+    .gallery-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 45px 0 30px;
+    }
+
+    .gallery-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .gallery-filter {
+      border: 1px solid #dedbd3;
+      background: transparent;
+      padding: 11px 20px;
+      border-radius: 30px;
+      font: 600 13px "DM Sans", sans-serif;
+      cursor: pointer;
+      transition: .25s;
+      color: #333;
+    }
+
+    .gallery-filter:hover,
+    .gallery-filter.active {
+      background: #c99c43;
+      border-color: #c99c43;
+      color: #111;
+    }
+
+    .gallery-count {
+      color: #777;
+      font-size: 13px;
+    }
+
+    .premium-gallery {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: 250px;
+      gap: 18px;
+      padding-bottom: 90px;
+    }
+
+    .gallery-item {
+      position: relative;
+      overflow: hidden;
+      border-radius: 5px;
+      background: #e5e2db;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(25px);
+      animation: galleryReveal .65s ease forwards;
+    }
+
+    .gallery-item:nth-child(5n + 1) {
+      grid-row: span 2;
+    }
+
+    .gallery-item:nth-child(5n + 3) {
+      grid-column: span 2;
+    }
+
+    .gallery-item.hidden {
+      display: none;
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      transition: transform .7s cubic-bezier(.2,.7,.2,1);
+    }
+
+    .gallery-item:hover img {
+      transform: scale(1.08);
+    }
+
+    .gallery-item::after {
+      content: "";
+      position: absolute;
+      inset: 35% 0 0;
+      background: linear-gradient(transparent, rgba(0,0,0,.75));
+      pointer-events: none;
+    }
+
+    .gallery-item-info {
+      position: absolute;
+      z-index: 1;
+      bottom: 22px;
+      left: 22px;
+      right: 22px;
+      color: white;
+      transform: translateY(8px);
+      opacity: .85;
+      transition: .3s;
+    }
+
+    .gallery-item:hover .gallery-item-info {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .gallery-item-info small {
+      display: block;
+      color: #e4bd70;
+      font-size: 10px;
+      letter-spacing: 2px;
+      margin-bottom: 7px;
+      text-transform: uppercase;
+    }
+
+    .gallery-item-info strong {
+      font: 700 19px Manrope, sans-serif;
+    }
+
+    .gallery-empty {
+      display: none;
+      text-align: center;
+      padding: 70px 20px;
+      color: #777;
+      grid-column: 1 / -1;
+    }
+
+    .gallery-empty.show {
+      display: block;
+    }
+
+    .gallery-loading {
+      text-align: center;
+      padding: 30px;
+      color: #777;
+      grid-column: 1 / -1;
+    }
+
+    .gallery-viewer {
+      position: fixed;
+      z-index: 99999;
+      inset: 0;
+      background: rgba(0,0,0,.96);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 65px 70px;
+    }
+
+    .gallery-viewer.open {
+      display: flex;
+    }
+
+    .viewer-image {
+      max-width: 100%;
+      max-height: 82vh;
+      object-fit: contain;
+      animation: viewerZoom .3s ease;
+    }
+
+    .viewer-close,
+    .viewer-prev,
+    .viewer-next {
+      position: absolute;
+      border: 0;
+      background: rgba(255,255,255,.12);
+      color: white;
+      cursor: pointer;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 27px;
+      transition: .2s;
+    }
+
+    .viewer-close:hover,
+    .viewer-prev:hover,
+    .viewer-next:hover {
+      background: #c99c43;
+      color: #111;
+    }
+
+    .viewer-close {
+      top: 22px;
+      right: 25px;
+    }
+
+    .viewer-prev {
+      left: 20px;
+    }
+
+    .viewer-next {
+      right: 20px;
+    }
+
+    .viewer-caption {
+      position: absolute;
+      bottom: 20px;
+      color: white;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .gallery-bottom {
+      background: #111;
+      color: white;
+      padding: 65px 20px;
+      text-align: center;
+    }
+
+    .gallery-bottom h2 {
+      font: 800 clamp(30px, 5vw, 55px) Manrope, sans-serif;
+      margin: 0 0 15px;
+    }
+
+    .gallery-bottom h2 em {
+      color: #d6a94e;
+      font-style: normal;
+    }
+
+    .gallery-bottom p {
+      color: #aaa;
+      margin-bottom: 25px;
+    }
+
+    @keyframes galleryReveal {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes viewerZoom {
+      from { opacity: 0; transform: scale(.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @media(max-width: 750px) {
+      .premium-gallery {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-rows: 190px;
+        gap: 10px;
+      }
+
+      .gallery-item:nth-child(5n + 3) {
+        grid-column: span 1;
+      }
+
+      .gallery-hero {
+        min-height: 360px;
+      }
+
+      .gallery-hero h1 {
+        letter-spacing: -2px;
+      }
+
+      .gallery-viewer {
+        padding: 60px 15px;
+      }
+
+      .viewer-prev { left: 5px; }
+      .viewer-next { right: 5px; }
+      .gallery-toolbar { margin-top: 30px; }
+    }
+
+    @media(max-width: 420px) {
+      .premium-gallery {
+        grid-auto-rows: 155px;
+      }
+
+      .gallery-item-info {
+        bottom: 12px;
+        left: 12px;
+      }
+
+      .gallery-item-info strong {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+
+<body class="gallery-page">
+
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <span>BUILDING TRUST. CREATING TOMORROW.</span>
+      <span>Quality construction • Reliable service</span>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="wrap nav">
+
+      <a class="brand" href="index.html">
+        <span class="brand-mark">KC</span>
+        <span>KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
+      </a>
+
+      <button class="menu-toggle" aria-label="Open menu" id="menuToggle">☰</button>
+
+      <nav id="mainNav">
+        <a href="index.html#home">Home</a>
+        <a href="index.html#about">About</a>
+        <a href="index.html#services">Services</a>
+        <a href="index.html#projects">Projects</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="index.html#contact" class="nav-cta">Contact Us <span>↗</span></a>
+      </nav>
+
+    </div>
+  </header>
+
+  <main>
+
+    <section class="gallery-hero">
+      <div class="wrap gallery-hero-content">
+        <p class="eyebrow"><i></i> KAVITH CONSTRUCTION • PORTFOLIO</p>
+        <h1>OUR WORK.<br><em>OUR STORY.</em></h1>
+        <p>
+          Explore our collection of construction projects, modern architecture,
+          interior designs and beautiful spaces.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+
+        <div class="gallery-toolbar">
+          <div class="gallery-filters">
+            <button class="gallery-filter active" data-filter="all">ALL PHOTOS</button>
+            <button class="gallery-filter" data-filter="residential">RESIDENTIAL</button>
+            <button class="gallery-filter" data-filter="interior">INTERIOR</button>
+            <button class="gallery-filter" data-filter="commercial">COMMERCIAL</button>
+            <button class="gallery-filter" data-filter="construction">CONSTRUCTION</button>
+          </div>
+
+          <span class="gallery-count" id="galleryCount">Loading photos...</span>
+        </div>
+
+        <div class="premium-gallery" id="premiumGallery">
+
+          <div class="gallery-loading" id="galleryLoading">Loading our gallery...</div>
+
+          <article class="gallery-item" data-category="residential">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85" alt="Contemporary residential architecture">
+            <div class="gallery-item-info">
+              <small>Residential</small>
+              <strong>Contemporary Living</strong>
+            </div>
+          </article>
+
+          <article class="gallery-item" data-category="interior">
+            <img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=85" alt="Modern interior design">
+            <div class="gallery-item-info">
+              <small>Interior</small>
+              <strong>Modern Interior</strong>
+            </div>
+          </article>
+
+          <article class="gallery-item" data-category="construction">
+            <img src="https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=1200&q=85" alt="Modern architecture">
+            <div class="gallery-item-info">
+              <small>Architecture</small>
+              <strong>Modern Architecture</strong>
+            </div>
+          </article>
+
+          <article class="gallery-item" data-category="interior">
+            <img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=85" alt="Luxury interior">
+            <div class="gallery-item-info">
+              <small>Interior</small>
+              <strong>Luxury Finishing</strong>
+            </div>
+          </article>
+
+          <article class="gallery-item" data-category="residential">
+            <img src="https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=85" alt="Living room">
+            <div class="gallery-item-info">
+              <small>Residential</small>
+              <strong>Beautiful Spaces</strong>
+            </div>
+          </article>
+
+          <div class="gallery-empty" id="galleryEmpty">
+            No photos found in this category.
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <section class="gallery-bottom">
+      <h2>LET'S BUILD <em>YOUR VISION.</em></h2>
+      <p>Have a construction project in mind? Let's talk.</p>
+      <a href="index.html#contact" class="btn gold">CONTACT US <span>↗</span></a>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">KC</span>
+        <span>KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
+      </a>
+
+      <p>© <span id="year"></span> KAVITH CONSTRUCTION. ALL RIGHTS RESERVED.</p>
+      <a href="index.html">BACK TO HOME ↗</a>
+    </div>
+  </footer>
+
+  <!-- FULL SCREEN PHOTO VIEWER -->
+  <div class="gallery-viewer" id="galleryViewer" aria-label="Photo viewer">
+    <button class="viewer-close" id="viewerClose" aria-label="Close">×</button>
+    <button class="viewer-prev" id="viewerPrev" aria-label="Previous photo">‹</button>
+    <img class="viewer-image" id="viewerImage" src="" alt="Gallery photo">
+    <button class="viewer-next" id="viewerNext" aria-label="Next photo">›</button>
+    <div class="viewer-caption" id="viewerCaption"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/config.js"></script>
+
+  <script>
+  (() => {
+    const $ = selector => document.querySelector(selector);
+
+    const gallery = $("#premiumGallery");
+    const viewer = $("#galleryViewer");
+    const viewerImage = $("#viewerImage");
+    const viewerCaption = $("#viewerCaption");
+
+    let activeFilter = "all";
+    let currentIndex = 0;
+
+    // Mobile navigation
+    $("#menuToggle")?.addEventListener("click", () => {
+      $("#mainNav")?.classList.toggle("open");
+    });
+
+    // Year
+    $("#year").textContent = new Date().getFullYear();
+
+    function getVisibleItems() {
+      return [...gallery.querySelectorAll(".gallery-item:not(.hidden)")];
+    }
+
+    function updateCount() {
+      $("#galleryCount").textContent =
+        getVisibleItems().length + " PHOTOS";
+      $("#galleryEmpty").classList.toggle(
+        "show",
+        getVisibleItems().length === 0
+      );
+    }
+
+    // Category filters
+    document.querySelectorAll(".gallery-filter").forEach(button => {
+      button.addEventListener("click", () => {
+        activeFilter = button.dataset.filter;
+
+        document.querySelectorAll(".gallery-filter").forEach(item => {
+          item.classList.toggle("active", item === button);
+        });
+
+        gallery.querySelectorAll(".gallery-item").forEach(item => {
+          const matches =
+            activeFilter === "all" ||
+            item.dataset.category === activeFilter;
+
+          item.classList.toggle("hidden", !matches);
+        });
+
+        updateCount();
+      });
+    });
+
+    // Fullscreen viewer
+    function openViewer(item) {
+      const items = getVisibleItems();
+      currentIndex = items.indexOf(item);
+      showViewerImage();
+      viewer.classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
+
+    function showViewerImage() {
+      const items = getVisibleItems();
+      if (!items.length) return;
+
+      const item = items[currentIndex];
+      const img = item.querySelector("img");
+      viewerImage.src = img.src;
+      viewerImage.alt = img.alt;
+      viewerCaption.textContent =
+        item.querySelector("strong")?.textContent || img.alt;
+    }
+
+    function closeViewer() {
+      viewer.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    function moveViewer(direction) {
+      const items = getVisibleItems();
+      if (!items.length) return;
+
+      currentIndex =
+        (currentIndex + direction + items.length) % items.length;
+
+      showViewerImage();
+    }
+
+    $("#viewerClose").addEventListener("click", closeViewer);
+    $("#viewerPrev").addEventListener("click", () => moveViewer(-1));
+    $("#viewerNext").addEventListener("click", () => moveViewer(1));
+
+    viewer.addEventListener("click", event => {
+      if (event.target === viewer) closeViewer();
+    });
+
+    document.addEventListener("keydown", event => {
+      if (!viewer.classList.contains("open")) return;
+
+      if (event.key === "Escape") closeViewer();
+      if (event.key === "ArrowLeft") moveViewer(-1);
+      if (event.key === "ArrowRight") moveViewer(1);
+    });
+
+    function addImage(url, caption, category) {
+      if (!url) return;
+
+      const item = document.createElement("article");
+      item.className = "gallery-item";
+      item.dataset.category = category || "construction";
+
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = caption || "KAVITH CONSTRUCTION project";
+      img.loading = "lazy";
+
+      const info = document.createElement("div");
+      info.className = "gallery-item-info";
+
+      const small = document.createElement("small");
+      small.textContent = category || "Project";
+
+      const strong = document.createElement("strong");
+      strong.textContent = caption || "KAVITH CONSTRUCTION";
+
+      info.append(small, strong);
+      item.append(img, info);
+
+      item.addEventListener("click", () => openViewer(item));
+
+      $("#galleryEmpty").before(item);
+    }
+
+    // Open local sample photos
+    function activateSamples() {
+      gallery.querySelectorAll(".gallery-item").forEach(item => {
+        item.addEventListener("click", () => openViewer(item));
+      });
+      updateCount();
+    }
+
+    activateSamples();
+
+    // Load uploaded photos from Supabase Media Gallery
+    async function loadUploadedPhotos() {
+      const config = window.KAVITH_CONFIG || {};
+
+      if (
+        !window.supabase ||
+        !config.supabaseUrl ||
+        !config.supabaseAnonKey
+      ) {
+        $("#galleryLoading")?.remove();
+        updateCount();
+        return;
+      }
+
+      try {
+        const client = window.supabase.createClient(
+          config.supabaseUrl,
+          config.supabaseAnonKey
+        );
+
+        const { data, error } = await client
+          .from("media")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          data.forEach(photo => {
+            const url = photo.public_url;
+
+            if (!url) return;
+
+            const rawCategory = (
+              photo.media_type || photo.caption || "construction"
+            ).toLowerCase();
+
+            let category = "construction";
+
+            if (rawCategory.includes("residential") || rawCategory.includes("house")) {
+              category = "residential";
+            } else if (rawCategory.includes("interior")) {
+              category = "interior";
+            } else if (rawCategory.includes("commercial")) {
+              category = "commercial";
+            }
+
+            addImage(
+              url,
+              photo.caption || photo.file_name || "Construction Project",
+              category
+            );
+          });
+        }
+
+      } catch (error) {
+        console.error("Gallery loading error:", error);
+      } finally {
+        $("#galleryLoading")?.remove();
+        updateCount();
+      }
+    }
+
+    loadUploadedPhotos();
+
+  })();
+  </script>
+
+</body>
+</html>
