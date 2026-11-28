@@ -15,8 +15,8 @@
   <style>
     .gallery-page {
       min-height: 100vh;
-      background: #f7f6f2;
-      color: #171717;
+      background: #151515 !important;
+      color: #ffffff !important;
     }
 
     /* Header and footer: hide KC fallback marks */
@@ -28,7 +28,7 @@
     .gallery-page .brand {
       display: inline-flex;
       align-items: center;
-      gap: 0;
+      gap: 12px;
       color: #fff !important;
       text-decoration: none;
     }
@@ -40,8 +40,32 @@
       display: block;
     }
 
+    /* Show company name beside logo */
     .gallery-page .brand-name {
-      display: none !important;
+      display: inline-block !important;
+      color: #ffffff !important;
+      font-family: Manrope, sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .gallery-page .brand-name b {
+      color: #ffffff !important;
+    }
+
+    .gallery-page .brand-name small {
+      display: block !important;
+      color: #d6a94e !important;
+      font-size: 9px;
+      letter-spacing: 2px;
+      margin-top: 5px;
+    }
+
+    /* Gallery section dark background */
+    .gallery-page .section {
+      background: #151515 !important;
+      color: #ffffff !important;
     }
 
     /* Gallery toolbar */
@@ -61,14 +85,14 @@
     }
 
     .gallery-filter {
-      border: 1px solid #dedbd3;
+      border: 1px solid #444444;
       background: transparent;
       padding: 11px 20px;
       border-radius: 30px;
       font: 600 13px "DM Sans", sans-serif;
       cursor: pointer;
       transition: .25s;
-      color: #333;
+      color: #eeeeee;
     }
 
     .gallery-filter:hover,
@@ -79,7 +103,7 @@
     }
 
     .gallery-count {
-      color: #777;
+      color: #cccccc;
       font-size: 13px;
     }
 
@@ -96,7 +120,7 @@
       position: relative;
       overflow: hidden;
       border-radius: 5px;
-      background: #e5e2db;
+      background: #252525;
       cursor: pointer;
       opacity: 0;
       transform: translateY(20px);
@@ -169,7 +193,7 @@
     .gallery-loading {
       text-align: center;
       padding: 60px 20px;
-      color: #777;
+      color: #cccccc;
       grid-column: 1 / -1;
     }
 
@@ -300,6 +324,15 @@
 
       .viewer-prev { left: 5px; }
       .viewer-next { right: 5px; }
+
+      .gallery-page .brand-logo {
+        width: 45px;
+        height: 45px;
+      }
+
+      .gallery-page .brand-name {
+        font-size: 14px;
+      }
     }
 
     @media(max-width: 420px) {
@@ -333,6 +366,7 @@
 
       <a class="brand" href="index.html" aria-label="KAVITH CONSTRUCTION Home">
         <img class="brand-logo" data-site-logo alt="KAVITH CONSTRUCTION Logo" hidden>
+        <span class="brand-name">KAVITH <b>CONSTRUCTION</b><small>BUILDING YOUR VISION</small></span>
       </a>
 
       <button class="menu-toggle" aria-label="Open menu" id="menuToggle">☰</button>
@@ -413,7 +447,7 @@
 
     let currentIndex = 0;
 
-    // Load the uploaded company logo only; no KC fallback text
+    // Load the uploaded company logo
     async function loadWebsiteLogo() {
       const config = window.KAVITH_CONFIG || {};
 
