@@ -13,10 +13,38 @@
   <link rel="stylesheet" href="assets/style.css">
 
   <style>
+    /* PAGE FADE-IN ANIMATION */
     .gallery-page {
       min-height: 100vh;
       background: #151515 !important;
       color: #ffffff !important;
+      animation: galleryPageEnter .8s ease both;
+    }
+
+    @keyframes galleryPageEnter {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* NAVIGATION BUTTONS - MOVE SLIGHTLY UP */
+    .gallery-page .header .nav {
+      align-items: center;
+      padding-top: 0 !important;
+      padding-bottom: 7px !important;
+    }
+
+    .gallery-page .header nav {
+      transform: translateY(-7px);
+    }
+
+    .gallery-page .header .menu-toggle {
+      transform: translateY(-5px);
     }
 
     .gallery-page .brand-mark,
@@ -288,12 +316,21 @@
     }
 
     @keyframes galleryReveal {
-      to { opacity: 1; transform: translateY(0); }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     @keyframes viewerZoom {
-      from { opacity: 0; transform: scale(.94); }
-      to { opacity: 1; transform: scale(1); }
+      from {
+        opacity: 0;
+        transform: scale(.94);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     @media(max-width: 750px) {
@@ -315,8 +352,13 @@
         padding: 60px 15px;
       }
 
-      .viewer-prev { left: 5px; }
-      .viewer-next { right: 5px; }
+      .viewer-prev {
+        left: 5px;
+      }
+
+      .viewer-next {
+        right: 5px;
+      }
 
       .gallery-page .brand-logo {
         width: 45px;
@@ -325,6 +367,14 @@
 
       .gallery-page .brand-name {
         font-size: 14px;
+      }
+
+      .gallery-page .header nav {
+        transform: none;
+      }
+
+      .gallery-page .header .menu-toggle {
+        transform: translateY(-3px);
       }
     }
 
@@ -340,6 +390,16 @@
 
       .gallery-item-info strong {
         font-size: 14px;
+      }
+    }
+
+    @media(prefers-reduced-motion: reduce) {
+      .gallery-page,
+      .gallery-item,
+      .viewer-image {
+        animation: none !important;
+        opacity: 1;
+        transform: none;
       }
     }
   </style>
@@ -466,7 +526,9 @@
           document.querySelectorAll("[data-site-logo]").forEach(img => {
             img.src = data.logo_url;
             img.hidden = false;
-            img.onerror = () => { img.hidden = true; };
+            img.onerror = () => {
+              img.hidden = true;
+            };
           });
         }
       } catch (error) {
